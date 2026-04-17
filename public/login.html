@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar Sesión — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>Iniciar Sesión</h1>
+      <div id="auth-alert"></div>
+
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" class="form-control" id="login-email" placeholder="tu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Contraseña</label>
+          <input type="password" class="form-control" id="login-password" placeholder="Tu contraseña" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Ingresar</button>
+      </form>
+
+      <div class="auth-footer">
+        <p><a href="#" id="forgot-link">¿Olvidaste tu contraseña?</a></p>
+        <p class="mt-1">¿No tenés cuenta? <a href="register.html">Registrate</a></p>
+      </div>
+
+      <!-- Formulario de recuperación (oculto por defecto) -->
+      <div id="forgot-section" class="hidden mt-2">
+        <hr style="border-color: var(--color-border); margin: 1rem 0;">
+        <h3 style="text-align: center;">Recuperar contraseña</h3>
+        <form onsubmit="handleForgotPassword(event)" class="mt-1">
+          <div class="form-group">
+            <label for="forgot-email">Tu email</label>
+            <input type="email" class="form-control" id="forgot-email" placeholder="tu@email.com" required>
+          </div>
+          <button type="submit" class="btn btn-secondary btn-block">Enviar email de recuperación</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Si ya está logueado, redirigir
+    auth.onAuthStateChanged(user => {
+      if (user) window.location.href = 'dashboard.html';
+    });
+
+    // Toggle del formulario de recuperación
+    document.getElementById('forgot-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      const section = document.getElementById('forgot-section');
+      section.classList.toggle('hidden');
+    });
+  </script>
+</body>
+</html>

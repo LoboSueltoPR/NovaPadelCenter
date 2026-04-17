@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi Perfil — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+
+    <div class="page-header">
+      <h1>Mi Perfil</h1>
+      <p>Tus datos y el historial de todo lo que pasó por acá</p>
+    </div>
+
+    <!-- ═══ DATOS PERSONALES ═══ -->
+    <div class="card mb-3">
+      <div class="user-profile-info" style="margin-bottom:1.25rem;">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div>
+          <h2 id="user-nombre" style="margin-bottom:.2rem">Cargando...</h2>
+          <p class="text-muted" id="user-email" style="font-size:.85rem"></p>
+        </div>
+      </div>
+
+      <div id="perfil-alert"></div>
+
+      <form id="perfil-form">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;" class="perfil-grid">
+          <div class="form-group">
+            <label>Nombre completo</label>
+            <input type="text" class="form-control" id="perfil-nombre" required>
+          </div>
+          <div class="form-group">
+            <label>Teléfono (WhatsApp)</label>
+            <input type="tel" class="form-control" id="perfil-telefono" placeholder="Ej: 2914362710">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" class="form-control" id="perfil-email" disabled style="opacity:.7">
+          <small class="text-muted" style="font-size:.78rem">El email no se puede cambiar desde acá.</small>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar cambios</button>
+      </form>
+    </div>
+
+    <!-- ═══ TABS: HISTORIAL ═══ -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-historial-tratamientos">Partidos</button>
+      <button class="tab-btn" data-tab="tab-historial-cremas">Compras</button>
+    </div>
+
+    <!-- Historial de tratamientos -->
+    <div id="tab-historial-tratamientos" class="tab-content active">
+      <h3 class="mb-2">Historial de partidos</h3>
+      <p class="text-muted mb-2" style="font-size:.85rem">Reservas jugadas</p>
+      <div id="historial-tratamientos">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div>
+
+    <!-- Historial de pedidos de cremas -->
+    <div id="tab-historial-cremas" class="tab-content">
+      <h3 class="mb-1">Pedidos en preparación</h3>
+      <p class="text-muted mb-2" style="font-size:.85rem">Pedidos con seña pagada, esperando retiro</p>
+      <div id="pedidos-activos" style="margin-bottom:1.5rem;">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+      </div>
+
+      <h3 class="mb-1">Historial de compras</h3>
+      <p class="text-muted mb-2" style="font-size:.85rem">Productos retirados</p>
+      <div id="historial-cremas">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/reservas.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Tabs
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    requireAuth(async (user, userData) => {
+      // Datos del usuario
+      const nombre = (userData && userData.nombre) || user.displayName || user.email;
+      document.getElementById('user-nombre').textContent   = nombre;
+      document.getElementById('user-email').textContent    = user.email;
+      document.getElementById('user-avatar').textContent   = nombre.charAt(0).toUpperCase();
+      document.getElementById('perfil-nombre').value       = (userData && userData.nombre) || user.displayName || '';
+      document.getElementById('perfil-telefono').value     = (userData && userData.telefono) || '';
+      document.getElementById('perfil-email').value        = user.email;
+
+      // Guardar cambios
+      document.getElementById('perfil-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nuevoNombre    = document.getElementById('perfil-nombre').value.trim();
+        const nuevoTelefono  = document.getElementById('perfil-telefono').value.trim();
+
+        if (!nuevoNombre) {
+          showAlert('perfil-alert', 'El nombre no puede quedar vacío.');
+          return;
+        }
+
+        try {
+          await db.collection('users').doc(user.uid).set({
+            nombre:    nuevoNombre,
+            telefono:  nuevoTelefono,
+            email:     user.email,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          }, { merge: true });
+
+          document.getElementById('user-nombre').textContent = nuevoNombre;
+          document.getElementById('user-avatar').textContent = nuevoNombre.charAt(0).toUpperCase();
+          showAlert('perfil-alert', 'Datos actualizados.', 'success');
+        } catch (err) {
+          console.error(err);
+          showAlert('perfil-alert', 'No se pudieron guardar los cambios.');
+        }
+      });
+
+      // Limpiar pendiente_pago vencidos (libera horarios y pedidos stale)
+      cleanupMyExpiredReservations(user.uid);
+      cleanupMyExpiredOrders(user.uid);
+
+      // Historiales
+      loadTreatmentHistory('historial-tratamientos');
+      loadMyActiveOrders('pedidos-activos');
+      loadOrderHistory('historial-cremas');
+    });
+  </script>
+</body>
+</html>

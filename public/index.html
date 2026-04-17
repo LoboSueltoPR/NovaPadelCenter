@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Padel Center — Inicio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    /* ── Estilos específicos del home ── */
+
+    .home-hero {
+      background: linear-gradient(160deg, #1F1F1F 0%, #2A2A2A 60%, var(--color-primary-dark) 100%);
+      color: #fff;
+      border-radius: var(--radius-lg);
+      padding: 3.5rem 2rem 3rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      align-items: center;
+      margin-bottom: 3rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Círculo decorativo fondo */
+    .home-hero::before {
+      content: '';
+      position: absolute;
+      right: -60px;
+      bottom: -60px;
+      width: 280px;
+      height: 280px;
+      background: rgba(220, 38, 38, 0.18);
+      border-radius: 50%;
+    }
+
+    .hero-text h1 {
+      font-size: 2.6rem;
+      line-height: 1.15;
+      color: #fff;
+      margin-bottom: 0.8rem;
+    }
+
+    .hero-text h1 em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--color-primary-light);
+    }
+
+    .hero-text p {
+      color: rgba(255,255,255,0.85);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: 1.5rem;
+      max-width: 380px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 0.8rem;
+      flex-wrap: wrap;
+    }
+
+    /* Lado derecho del hero: tarjeta decorativa */
+    .hero-visual {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-stat {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 1rem 1.2rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      border-left: 3px solid var(--color-primary);
+    }
+
+    .hero-stat:nth-child(2) { border-left-color: var(--color-accent); margin-left: 1.5rem; }
+    .hero-stat:nth-child(3) { border-left-color: var(--color-success); }
+
+    .hero-stat-icon { font-size: 1.4rem; }
+
+    .hero-stat-text strong {
+      display: block;
+      font-size: 0.9rem;
+      color: var(--color-text);
+    }
+
+    .hero-stat-text span {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+    }
+
+    /* ── Sección servicios ── */
+    .section-title {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .section-title h2 {
+      color: var(--color-primary-dark);
+      margin-bottom: 0.3rem;
+    }
+
+    .section-title p {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+    }
+
+    .section-title .divider {
+      width: 50px;
+      height: 2px;
+      background: var(--color-primary);
+      margin: 0.8rem auto 0;
+      border-radius: 2px;
+    }
+
+    /* ── Cards de categorías mejoradas ── */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem;
+      margin-bottom: 3rem;
+    }
+
+    .cat-card {
+      background: var(--color-white);
+      border-radius: var(--radius-md);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      border: 1px solid var(--color-border);
+      transition: var(--transition);
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .cat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--color-primary-light);
+    }
+
+    .cat-icon-wrap {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      font-size: 1.8rem;
+    }
+
+    .cat-card:nth-child(1) .cat-icon-wrap { background: #FEE2E2; }
+    .cat-card:nth-child(2) .cat-icon-wrap { background: #F5F5F5; }
+    .cat-card:nth-child(3) .cat-icon-wrap { background: #E5E5E5; }
+
+    .cat-card h3 {
+      font-size: 1.1rem;
+      color: var(--color-primary-dark);
+      margin-bottom: 0.4rem;
+    }
+
+    .cat-card p {
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    .cat-card .cat-count {
+      display: inline-block;
+      margin-top: 0.8rem;
+      font-size: 0.75rem;
+      color: var(--color-primary);
+      font-weight: 600;
+    }
+
+    /* ── Pasos ── */
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    /* Línea conectora entre pasos */
+    .steps-grid::before {
+      content: '';
+      position: absolute;
+      top: 28px;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: var(--color-primary-light);
+      z-index: 0;
+    }
+
+    .step-card {
+      text-align: center;
+      padding: 1.5rem 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-num {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      box-shadow: 0 2px 8px rgba(220,38,38,0.4);
+    }
+
+    .step-card h3 {
+      font-family: var(--font-main);
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .step-card p {
+      font-size: 0.82rem;
+      color: var(--color-text-muted);
+      line-height: 1.5;
+    }
+
+    /* ── Banner CTA ── */
+    .home-cta-banner {
+      background: linear-gradient(135deg, var(--color-primary-dark), var(--color-primary));
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .home-cta-banner h2 {
+      color: white;
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .home-cta-banner p {
+      color: rgba(255,255,255,0.85);
+      margin-bottom: 1.2rem;
+      font-size: 0.95rem;
+    }
+
+    .btn-white {
+      background: white;
+      color: var(--color-primary-dark);
+      font-weight: 600;
+    }
+
+    .btn-white:hover {
+      background: var(--color-bg-alt);
+      color: var(--color-primary-dark);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .home-hero {
+        grid-template-columns: 1fr;
+        padding: 2.5rem 1.5rem;
+        text-align: center;
+      }
+
+      .hero-text h1 { font-size: 2rem; }
+      .hero-text p { max-width: 100%; }
+      .hero-cta { justify-content: center; }
+      .hero-visual { display: none; } /* ocultar en mobile para no ocupar espacio */
+
+      .cat-grid { grid-template-columns: 1fr; gap: 0.8rem; }
+      .cat-card { padding: 1.2rem; display: flex; align-items: center; text-align: left; gap: 1rem; }
+      .cat-icon-wrap { width: 48px; height: 48px; font-size: 1.4rem; flex-shrink: 0; margin: 0; }
+
+      .steps-grid { grid-template-columns: 1fr; gap: 0.5rem; }
+      .steps-grid::before { display: none; }
+      .step-card { padding: 1rem; display: flex; align-items: flex-start; gap: 1rem; text-align: left; }
+      .step-num { flex-shrink: 0; margin: 0; width: 36px; height: 36px; font-size: 0.9rem; }
+
+      .home-cta-banner { padding: 2rem 1.2rem; }
+      .home-cta-banner h2 { font-size: 1.3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+
+    <!-- ── Hero ── -->
+    <section class="home-hero">
+      <div class="hero-text">
+        <h1>Reservá tu<br><em>cancha</em> de pádel</h1>
+        <p>3 canchas disponibles. Elegí fecha y horario en segundos y te asignamos la cancha automáticamente.</p>
+        <div class="hero-cta">
+          <a href="nueva-reserva.html" class="btn btn-primary">Reservar cancha</a>
+          <a href="tratamientos.html" class="btn btn-secondary">Ver canchas</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-stat">
+          <span class="hero-stat-icon">🎾</span>
+          <div class="hero-stat-text">
+            <strong>3 canchas de pádel</strong>
+            <span>Techadas e iluminadas</span>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-icon">📅</span>
+          <div class="hero-stat-text">
+            <strong>Reserva online 24/7</strong>
+            <span>Elegí tu fecha y horario</span>
+          </div>
+        </div>
+        <div class="hero-stat">
+          <span class="hero-stat-icon">🏆</span>
+          <div class="hero-stat-text">
+            <strong>Torneos y clases</strong>
+            <span>Todos los niveles</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Categorías ── -->
+    <div class="section-title">
+      <h2>Nuestras canchas</h2>
+      <p>Elegí lo que mejor te venga para jugar</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="cat-grid">
+      <a href="nueva-reserva.html" class="cat-card">
+        <div class="cat-icon-wrap">🎾</div>
+        <h3>Alquiler por hora</h3>
+        <p>Reservá cancha por 60 o 90 minutos. Ideal para partidos entre amigos.</p>
+        <span class="cat-count">Reservar →</span>
+      </a>
+      <a href="tratamientos.html" class="cat-card">
+        <div class="cat-icon-wrap">🏆</div>
+        <h3>Torneos</h3>
+        <p>Sumate a nuestros torneos internos y externos para todos los niveles.</p>
+        <span class="cat-count">Ver más →</span>
+      </a>
+      <a href="tratamientos.html" class="cat-card">
+        <div class="cat-icon-wrap">🏓</div>
+        <h3>Clases</h3>
+        <p>Clases grupales e individuales con profes especializados en pádel.</p>
+        <span class="cat-count">Ver más →</span>
+      </a>
+    </div>
+
+    <!-- ── Pasos ── -->
+    <div class="section-title">
+      <h2>¿Cómo funciona?</h2>
+      <p>Reservar tu cancha es muy fácil</p>
+      <div class="divider"></div>
+    </div>
+
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <div>
+          <h3>Creá tu cuenta</h3>
+          <p>Registrate gratis con tu email en menos de un minuto.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <div>
+          <h3>Elegí fecha y horario</h3>
+          <p>Mirá la disponibilidad en vivo y seleccioná el slot que te guste.</p>
+        </div>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <div>
+          <h3>Te asignamos cancha</h3>
+          <p>Te confirmamos qué cancha (1, 2 o 3) te toca. ¡A jugar!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Banner CTA ── -->
+    <div class="home-cta-banner">
+      <h2>¿Listo para jugar?</h2>
+      <p>Elegí el día y horario que mejor te quede</p>
+      <a href="nueva-reserva.html" class="btn btn-white">Reservar ahora</a>
+    </div>
+
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+  </script>
+</body>
+</html>

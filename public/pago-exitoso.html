@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pago Exitoso — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .result-card {
+      max-width: 500px;
+      margin: 3rem auto;
+      text-align: center;
+      padding: 3rem 2rem;
+    }
+    .result-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      margin: 0 auto 1.5rem;
+    }
+    .result-icon.success { background: #E8F5E9; }
+    .result-icon.pending { background: #FFF8E1; }
+    .result-icon.error   { background: #FFEBEE; }
+    .result-card h1 {
+      font-size: 1.8rem;
+      color: var(--color-primary-dark);
+      margin-bottom: 0.7rem;
+    }
+    .result-card p {
+      color: var(--color-text-light);
+      line-height: 1.7;
+      margin-bottom: 0.5rem;
+    }
+    .result-detail {
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.5rem;
+      margin: 1.5rem 0;
+      text-align: left;
+    }
+    .result-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+      font-size: 0.88rem;
+      color: var(--color-text-light);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .result-detail-row:last-child { border-bottom: none; }
+    .result-detail-row strong { color: var(--color-text); }
+    .btn-group-center {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+    <div class="card result-card" id="result-card">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    requireAuth(async (user) => {
+      const card   = document.getElementById('result-card');
+      const params = new URLSearchParams(window.location.search);
+
+      const collectionStatus = params.get('collection_status'); // 'approved' / 'rejected' / 'pending'
+      const reservaId        = params.get('external_reference'); // ID del doc en Firestore
+      const paymentId        = params.get('collection_id');
+      const isPending        = params.get('pending') === '1';
+
+      // ── Pago en proceso ──
+      if (isPending) {
+        card.innerHTML = `
+          <div class="result-icon pending">⏳</div>
+          <h1>Pago en proceso</h1>
+          <p>Tu pago está siendo procesado por Mercado Pago.</p>
+          <p>Te avisaremos cuando se confirme y tu turno quedará reservado.</p>
+          <div class="btn-group-center">
+            <a href="mis-reservas.html" class="btn btn-primary">Ver mis reservas</a>
+            <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+          </div>`;
+        return;
+      }
+
+      // ── Pago aprobado ──
+      if (collectionStatus === 'approved' && reservaId) {
+        try {
+          // Actualizar la reserva a "confirmada" (seña recibida)
+          await db.collection('reservations').doc(reservaId).update({
+            estado:        'confirmada',
+            paymentId:     paymentId || null,
+            paymentStatus: 'approved',
+            updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          // Leer datos de la reserva para mostrar detalle
+          const doc = await db.collection('reservations').doc(reservaId).get();
+          const r   = doc.exists ? doc.data() : null;
+
+          if (r) {
+            const saldoRestante = (r.precioTotal || 0) - (r.senia || 0);
+            const waMsg  = buildReservaConfirmMessage(r);
+            const waLink = buildWAUrl(BUSINESS_WA_PHONE, waMsg);
+            card.innerHTML = `
+              <div class="result-icon success">✅</div>
+              <h1>¡Turno reservado!</h1>
+              <p>Tu seña fue recibida. El turno está confirmado.</p>
+              <div class="result-detail">
+                <div class="result-detail-row"><span>Servicio</span><strong>${r.servicioNombre}</strong></div>
+                <div class="result-detail-row"><span>Fecha</span><strong>${formatDate(r.fecha)}</strong></div>
+                <div class="result-detail-row"><span>Horario</span><strong>${r.hora} hs</strong></div>
+                <div class="result-detail-row"><span>Seña pagada</span><strong>$${(r.senia||0).toLocaleString('es-AR')}</strong></div>
+                ${saldoRestante > 0 ? `<div class="result-detail-row"><span>Saldo el día del turno</span><strong>$${saldoRestante.toLocaleString('es-AR')}</strong></div>` : ''}
+              </div>
+              <p style="font-size:.9rem;color:var(--color-primary-dark);margin:1rem 0 .2rem">
+                📱 Te abrimos WhatsApp para que mandes la confirmación a ${BUSINESS_NAME}.
+              </p>
+              <div class="btn-group-center">
+                <a href="${waLink}" target="_blank" class="btn btn-whatsapp">Enviar confirmación por WhatsApp</a>
+                <a href="mis-reservas.html" class="btn btn-primary">Ver mis reservas</a>
+                <a href="nueva-reserva.html" class="btn btn-secondary">Reservar otro turno</a>
+              </div>`;
+            // Abrir WhatsApp automáticamente en nueva pestaña
+            setTimeout(() => { window.open(waLink, '_blank'); }, 800);
+          } else {
+            showGenericSuccess(card);
+          }
+        } catch (err) {
+          console.error('Error al confirmar reserva:', err);
+          showGenericSuccess(card);
+        }
+        return;
+      }
+
+      // ── Pago rechazado / cancelado ──
+      if (collectionStatus && collectionStatus !== 'approved') {
+        // Cancelar la reserva pendiente_pago
+        if (reservaId) {
+          try {
+            await db.collection('reservations').doc(reservaId).update({
+              estado:        'cancelada',
+              paymentStatus: collectionStatus,
+              updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (e) { /* silencioso */ }
+        }
+        card.innerHTML = `
+          <div class="result-icon error">❌</div>
+          <h1>Pago no completado</h1>
+          <p>El pago fue rechazado o cancelado. Tu turno no fue reservado.</p>
+          <div class="btn-group-center">
+            <a href="nueva-reserva.html" class="btn btn-primary">Intentar de nuevo</a>
+            <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+          </div>`;
+        return;
+      }
+
+      // ── Sin parámetros (acceso directo) ──
+      showGenericSuccess(card);
+    });
+
+    function showGenericSuccess(card) {
+      card.innerHTML = `
+        <div class="result-icon success">✅</div>
+        <h1>¡Pago exitoso!</h1>
+        <p>Tu turno fue reservado correctamente.</p>
+        <div class="btn-group-center">
+          <a href="mis-reservas.html" class="btn btn-primary">Ver mis reservas</a>
+          <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+        </div>`;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+  </script>
+</body>
+</html>

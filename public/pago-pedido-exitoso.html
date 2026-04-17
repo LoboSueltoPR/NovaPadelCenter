@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedido Confirmado — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .result-card { max-width:500px; margin:3rem auto; text-align:center; padding:3rem 2rem; }
+    .result-icon { width:80px; height:80px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.5rem; margin:0 auto 1.5rem; }
+    .result-icon.success { background:#E8F5E9; }
+    .result-icon.pending { background:#FFF8E1; }
+    .result-icon.error   { background:#FFEBEE; }
+    .result-card h1 { font-size:1.8rem; color:var(--color-primary-dark); margin-bottom:.7rem; }
+    .result-card p  { color:var(--color-text-light); line-height:1.7; margin-bottom:.5rem; }
+    .result-detail  { background:var(--color-bg-alt); border-radius:var(--radius-md); padding:1rem 1.5rem; margin:1.5rem 0; text-align:left; }
+    .result-detail-row { display:flex; justify-content:space-between; padding:.35rem 0; font-size:.88rem; color:var(--color-text-light); border-bottom:1px solid var(--color-border); }
+    .result-detail-row:last-child { border-bottom:none; }
+    .result-detail-row strong { color:var(--color-text); }
+    .btn-group-center { display:flex; flex-direction:column; gap:.8rem; margin-top:2rem; }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+    <div class="card result-card" id="result-card">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    requireAuth(async (user) => {
+      const card     = document.getElementById('result-card');
+      const params   = new URLSearchParams(window.location.search);
+      const status   = params.get('collection_status');
+      const pedidoId = params.get('external_reference');
+      const payId    = params.get('collection_id');
+      const pending  = params.get('pending') === '1';
+
+      if (pending) {
+        card.innerHTML = `
+          <div class="result-icon pending">⏳</div>
+          <h1>Pago en proceso</h1>
+          <p>Tu pago está siendo procesado. Te avisaremos cuando se confirme.</p>
+          <div class="btn-group-center">
+            <a href="mis-cremas.html" class="btn btn-primary">Ver productos</a>
+          </div>`;
+        return;
+      }
+
+      if (status === 'approved' && pedidoId) {
+        try {
+          await db.collection('orders').doc(pedidoId).update({
+            estado:        'pendiente',
+            paymentId:     payId || null,
+            paymentStatus: 'approved',
+            updatedAt:     firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          const doc = await db.collection('orders').doc(pedidoId).get();
+          const p   = doc.exists ? doc.data() : null;
+
+          if (p) {
+            const saldo  = (p.precio || 0) - (p.senia || 0);
+            const waMsg  = buildPedidoConfirmMessage(p);
+            const waLink = buildWAUrl(BUSINESS_WA_PHONE, waMsg);
+            card.innerHTML = `
+              <div class="result-icon success">✅</div>
+              <h1>¡Pedido confirmado!</h1>
+              <p>Tu seña fue recibida. Preparamos tu pedido para el retiro.</p>
+              <div class="result-detail">
+                <div class="result-detail-row"><span>Producto</span><strong>${p.productoNombre}</strong></div>
+                <div class="result-detail-row"><span>Seña pagada</span><strong>$${(p.senia||0).toLocaleString('es-AR')}</strong></div>
+                <div class="result-detail-row"><span>Saldo al retirar</span><strong>$${saldo.toLocaleString('es-AR')}</strong></div>
+              </div>
+              <p style="font-size:.9rem;color:var(--color-primary-dark);margin:1rem 0 .2rem">
+                📱 Te abrimos WhatsApp para avisarle a ${BUSINESS_NAME} de tu pedido.
+              </p>
+              <div class="btn-group-center">
+                <a href="${waLink}" target="_blank" class="btn btn-whatsapp">Enviar confirmación por WhatsApp</a>
+                <a href="mis-cremas.html" class="btn btn-primary">Seguir comprando</a>
+                <a href="index.html" class="btn btn-secondary">Volver al inicio</a>
+              </div>`;
+            setTimeout(() => { window.open(waLink, '_blank'); }, 800);
+          } else { showOk(card); }
+        } catch (err) { console.error(err); showOk(card); }
+        return;
+      }
+
+      if (status && status !== 'approved') {
+        if (pedidoId) {
+          try {
+            await db.collection('orders').doc(pedidoId).update({
+              estado: 'cancelada', paymentStatus: status,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+          } catch (e) {}
+        }
+        card.innerHTML = `
+          <div class="result-icon error">❌</div>
+          <h1>Pago no completado</h1>
+          <p>El pago fue rechazado o cancelado. Tu pedido no fue confirmado.</p>
+          <div class="btn-group-center">
+            <a href="mis-cremas.html" class="btn btn-primary">Intentar de nuevo</a>
+          </div>`;
+        return;
+      }
+
+      showOk(card);
+    });
+
+    function showOk(card) {
+      card.innerHTML = `
+        <div class="result-icon success">✅</div>
+        <h1>¡Pedido recibido!</h1>
+        <p>Tu pedido fue confirmado correctamente.</p>
+        <div class="btn-group-center">
+          <a href="mis-cremas.html" class="btn btn-primary">Seguir comprando</a>
+        </div>`;
+    }
+  </script>
+</body>
+</html>

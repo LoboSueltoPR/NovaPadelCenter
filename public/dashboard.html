@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Padel Center</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Página de transición: redirige según rol -->
+  <div class="loading-overlay" style="height:100vh">
+    <div class="spinner"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    requireAuth((user, userData) => {
+      if (userData && userData.rol === 'admin') {
+        window.location.href = 'admin.html';
+      } else {
+        window.location.href = 'mis-reservas.html';
+      }
+    });
+  </script>
+</body>
+</html>

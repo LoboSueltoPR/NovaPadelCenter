@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Usuarios ───
+    // Cada usuario puede leer y editar solo su propio perfil.
+    // Los admins pueden leer todos los perfiles.
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow delete: if false; // No se eliminan usuarios
+    }
+
+    // ─── Servicios ───
+    // Lectura pública (para mostrar en la web).
+    // Solo admins pueden crear, editar o eliminar servicios.
+    match /services/{serviceId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && isAdmin();
+    }
+
+    // ─── Reservas ───
+    // `get` (lectura de doc específico): solo el dueño o admin.
+    // `list` (queries, ej: disponibilidad por fecha): cualquier auth — necesario
+    //   para que getOccupiedSlots() pueda verificar horarios sin requerir backend.
+    // Solo el dueño o admin puede crear/editar.
+    match /reservations/{reservationId} {
+      allow get: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // ─── Configuración ───
+    // config/mp contiene el token de Mercado Pago: solo usuarios autenticados.
+    // config/bloqueos: también requiere auth (la reserva ya exige login de todas formas).
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isAdmin();
+    }
+
+    // ─── Productos (cremas) ───
+    // Lectura pública para que cualquier visitante pueda ver el catálogo.
+    // Solo admins pueden crear, editar o eliminar.
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if request.auth != null && isAdmin();
+    }
+
+    // ─── Pedidos de cremas ───
+    // Solo el dueño del pedido o un admin puede leer.
+    // Esto evita que cualquier usuario autenticado vea pedidos ajenos.
+    // Las queries de usuario (.where('userId','==', uid)) siguen funcionando
+    // porque Firestore valida la regla contra cada documento devuelto.
+    match /orders/{orderId} {
+      allow read: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // ─── Función auxiliar: verificar si el usuario es admin ───
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'admin';
+    }
+  }
+}

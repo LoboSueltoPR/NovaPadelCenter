@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel Admin — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+
+    <!-- Encabezado -->
+    <div class="page-header">
+      <h1>Panel de Administración</h1>
+      <p id="admin-fecha">Cargando...</p>
+    </div>
+
+    <!-- ═══ STATS DEL DÍA ═══ -->
+    <div class="admin-stats">
+      <div class="stat-card">
+        <span class="stat-num" id="stat-hoy">—</span>
+        <span class="stat-label">Turnos hoy</span>
+      </div>
+      <div class="stat-card stat-card--pending">
+        <span class="stat-num" id="stat-pendientes">—</span>
+        <span class="stat-label">Pendientes</span>
+      </div>
+      <div class="stat-card stat-card--confirmed">
+        <span class="stat-num" id="stat-confirmadas">—</span>
+        <span class="stat-label">Confirmadas</span>
+      </div>
+      <div class="stat-card stat-card--week">
+        <span class="stat-num" id="stat-semana">—</span>
+        <span class="stat-label">Esta semana</span>
+      </div>
+    </div>
+
+    <!-- ═══ AGENDA DE HOY ═══ -->
+    <div class="card mb-3">
+      <div class="flex-between mb-1">
+        <h3>Agenda de hoy</h3>
+        <button class="btn btn-sm btn-secondary" onclick="loadAgendaHoy()">Actualizar</button>
+      </div>
+      <div id="agenda-hoy">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ SECCIÓN OPERATIVA: Reservas + Pedidos (tabs principales) ═══ -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-reservas">Reservas</button>
+      <button class="tab-btn" data-tab="tab-pedidos">Pedidos Catálogo</button>
+    </div>
+
+    <!-- TAB: Reservas -->
+    <div id="tab-reservas" class="tab-content active">
+      <div class="flex-between mb-2" style="flex-wrap:wrap; gap:0.8rem;">
+        <h2>Todas las Reservas</h2>
+        <div style="display:flex; gap:0.8rem; flex-wrap:wrap; align-items:center;">
+          <input type="date" class="form-control" id="filtro-fecha" style="width:auto"
+            onchange="loadAllReservations(document.getElementById('filtro-estado').value, this.value)">
+          <select class="form-control" id="filtro-estado" style="width:auto"
+            onchange="loadAllReservations(this.value, document.getElementById('filtro-fecha').value)">
+            <option value="todos">Todos los estados</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="confirmada">Confirmadas</option>
+            <option value="completado">Realizados</option>
+          </select>
+          <button class="btn btn-sm btn-secondary"
+            onclick="document.getElementById('filtro-fecha').value=''; document.getElementById('filtro-estado').value='todos'; loadAllReservations();">
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+      <div id="admin-reservations">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div>
+
+    <!-- TAB: Pedidos Catálogo -->
+    <div id="tab-pedidos" class="tab-content">
+      <div class="flex-between mb-2" style="flex-wrap:wrap; gap:0.8rem;">
+        <h2>Pedidos de Catálogo</h2>
+        <div style="display:flex; gap:0.8rem; flex-wrap:wrap; align-items:center;">
+          <select class="form-control" id="filtro-estado-pedido" style="width:auto"
+            onchange="loadAllOrders(this.value)">
+            <option value="todos">Todos los estados</option>
+            <option value="pendiente">Con seña pagada</option>
+            <option value="completado">Completados</option>
+          </select>
+          <button class="btn btn-sm btn-secondary" onclick="document.getElementById('filtro-estado-pedido').value='todos'; loadAllOrders()">
+            Limpiar filtro
+          </button>
+        </div>
+      </div>
+      <div id="admin-orders">
+        <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+      </div>
+    </div>
+
+    <!-- ═══ SECCIÓN SECUNDARIA: Catálogo ═══ -->
+    <details class="admin-seccion" id="seccion-catalogo">
+      <summary class="admin-seccion-header">
+        <span class="admin-seccion-icon">📋</span>
+        <span class="admin-seccion-title">Catálogo</span>
+        <span class="admin-seccion-desc">Servicios y productos de la tienda</span>
+        <span class="admin-seccion-arrow">›</span>
+      </summary>
+
+      <div class="admin-seccion-body">
+        <!-- Sub-tabs del catálogo -->
+        <div class="subtabs">
+          <button class="subtab-btn active" data-subtab="subtab-servicios">Servicios</button>
+          <button class="subtab-btn" data-subtab="subtab-productos">Productos (Catálogo)</button>
+        </div>
+
+        <!-- Subtab: Servicios -->
+        <div id="subtab-servicios" class="subtab-content active">
+          <div class="flex-between mb-2" style="flex-wrap:wrap; gap:0.8rem;">
+            <h3>Gestión de Servicios</h3>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="showServiceModal()">+ Nuevo servicio</button>
+            </div>
+          </div>
+          <div id="admin-services-list">
+            <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+          </div>
+        </div>
+
+        <!-- Subtab: Productos -->
+        <div id="subtab-productos" class="subtab-content">
+          <div class="flex-between mb-2" style="flex-wrap:wrap; gap:0.8rem;">
+            <h3>Gestión de Productos</h3>
+            <div class="btn-group">
+              <button class="btn btn-primary" onclick="showProductModal()">+ Nuevo producto</button>
+            </div>
+          </div>
+          <div id="admin-products-list">
+            <div class="loading-overlay"><div class="spinner"></div> Cargando...</div>
+          </div>
+        </div>
+      </div>
+    </details>
+
+    <!-- ═══ SECCIÓN TERCIARIA: Configuración ═══ -->
+    <details class="admin-seccion admin-seccion--config" id="seccion-config">
+      <summary class="admin-seccion-header">
+        <span class="admin-seccion-icon">⚙️</span>
+        <span class="admin-seccion-title">Configuración</span>
+        <span class="admin-seccion-desc">Disponibilidad, bloqueos y horarios</span>
+        <span class="admin-seccion-arrow">›</span>
+      </summary>
+
+      <div class="admin-seccion-body">
+        <div id="bloqueo-alert"></div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;" class="disponibilidad-grid">
+
+          <!-- Bloquear día completo -->
+          <div class="card">
+            <h3 class="mb-1">Bloquear día completo</h3>
+            <p class="text-muted mb-2" style="font-size:0.85rem">
+              Feriados, vacaciones o días sin atención. Los clientes no podrán reservar ese día.
+            </p>
+            <div class="form-group">
+              <label>Seleccioná el día a bloquear</label>
+              <input type="date" class="form-control" id="bloqueo-fecha">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="bloquearDia()">Bloquear día</button>
+
+            <div class="mt-2">
+              <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--color-text-light)">Días bloqueados:</h4>
+              <div id="dias-bloqueados-list">
+                <div class="loading-overlay" style="padding:1rem 0"><div class="spinner"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bloquear horario específico -->
+          <div class="card">
+            <h3 class="mb-1">Bloquear horario específico</h3>
+            <p class="text-muted mb-2" style="font-size:0.85rem">
+              Bloqueá un horario puntual en una fecha determinada (reunión, descanso, etc).
+            </p>
+            <div class="form-group">
+              <label>Fecha</label>
+              <input type="date" class="form-control" id="bloqueo-hora-fecha"
+                onchange="renderHorariosBloqueados(this.value)">
+            </div>
+            <div class="form-group">
+              <label>Horario a bloquear</label>
+              <select class="form-control" id="bloqueo-hora-select"></select>
+            </div>
+            <button class="btn btn-primary btn-block" onclick="bloquearHorario()">Bloquear horario</button>
+
+            <div class="mt-2">
+              <h4 style="font-size:0.9rem; margin-bottom:0.5rem; color:var(--color-text-light)">Horarios bloqueados ese día:</h4>
+              <div id="horarios-bloqueados-list">
+                <p class="text-muted" style="font-size:0.85rem">Seleccioná una fecha para ver.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Horario de atención general -->
+        <div class="card mt-2">
+          <h3 class="mb-1">Horario de atención</h3>
+          <p class="text-muted mb-2" style="font-size:0.85rem">Rango general de turnos ofrecidos cada día.</p>
+          <div id="disponibilidad-alert"></div>
+          <form id="disponibilidad-form">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem;">
+              <div class="form-group">
+                <label>Hora de inicio</label>
+                <select class="form-control" id="hora-inicio">
+                  <option value="8">08:00</option>
+                  <option value="9" selected>09:00</option>
+                  <option value="10">10:00</option>
+                  <option value="11">11:00</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Hora de fin</label>
+                <select class="form-control" id="hora-fin">
+                  <option value="17">17:00</option>
+                  <option value="18">18:00</option>
+                  <option value="19">19:00</option>
+                  <option value="20" selected>20:00</option>
+                  <option value="21">21:00</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Duración del turno</label>
+                <select class="form-control" id="intervalo">
+                  <option value="30">30 minutos</option>
+                  <option value="60" selected>60 minutos</option>
+                  <option value="90">90 minutos</option>
+                </select>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Guardar configuración</button>
+          </form>
+        </div>
+      </div>
+    </details>
+
+  </div><!-- /.container -->
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/tienda.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // ── Sub-tabs del catálogo ──
+    document.querySelectorAll('.subtab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.subtab;
+        document.querySelectorAll('.subtab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.subtab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(target).classList.add('active');
+      });
+    });
+
+    requireAdmin(async (user, userData) => {
+      // Mostrar fecha de hoy en el encabezado
+      const hoy = new Date().toLocaleDateString('es-AR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      document.getElementById('admin-fecha').textContent = hoy.charAt(0).toUpperCase() + hoy.slice(1);
+
+      initAdminTabs();
+      loadAdminStats();
+      loadAgendaHoy();
+      loadAllReservations();
+      loadAllServices();
+      loadAllOrders();
+      loadAllProducts();
+      renderDiasBloqueados();
+      initHorariosBloqueadosSelect();
+
+      // Cargar config horario
+      try {
+        const configDoc = await db.collection('config').doc('disponibilidad').get();
+        if (configDoc.exists) {
+          const cfg = configDoc.data();
+          document.getElementById('hora-inicio').value = cfg.horaInicio || 9;
+          document.getElementById('hora-fin').value = cfg.horaFin || 20;
+          document.getElementById('intervalo').value = cfg.intervaloMin || 60;
+        }
+      } catch (err) { console.error('Error config:', err); }
+
+      // Guardar config horario
+      document.getElementById('disponibilidad-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+          await db.collection('config').doc('disponibilidad').set({
+            horaInicio: parseInt(document.getElementById('hora-inicio').value),
+            horaFin: parseInt(document.getElementById('hora-fin').value),
+            intervaloMin: parseInt(document.getElementById('intervalo').value),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          showAlert('disponibilidad-alert', 'Configuración guardada.', 'success');
+        } catch {
+          showAlert('disponibilidad-alert', 'Error al guardar.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>

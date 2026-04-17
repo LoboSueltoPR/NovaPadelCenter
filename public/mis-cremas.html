@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <!-- Hero tienda -->
+  <div class="tienda-hero">
+    <h1>Catálogo de productos</h1>
+    <p>Accesorios para tu juego — paletas, pelotas, ropa y más.</p>
+  </div>
+
+  <div class="container">
+
+    <div class="alert alert-info mb-3">
+      Próximamente: accesorios, paletas, pelotas y ropa deportiva.
+    </div>
+
+    <!-- Filtros por categoría -->
+    <div class="tienda-filtros">
+      <button class="filtro-btn active" onclick="filtrar(this,'todos')">Todos</button>
+      <button class="filtro-btn" onclick="filtrar(this,'facial')">Paletas</button>
+      <button class="filtro-btn" onclick="filtrar(this,'corporal')">Accesorios</button>
+    </div>
+
+    <div id="alert-tienda"></div>
+
+    <!-- Grilla de productos -->
+    <div id="productos-container">
+      <div class="loading-overlay"><div class="spinner"></div></div>
+    </div>
+
+  </div>
+
+  <!-- Modal de pedido -->
+  <div class="modal-overlay" id="pedido-modal" role="dialog" aria-modal="true" aria-labelledby="modal-nombre" onclick="if(event.target===this)cerrarModal()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-nombre">Producto</h3>
+        <button class="modal-close" aria-label="Cerrar" onclick="cerrarModal()">✕</button>
+      </div>
+
+      <div id="pedido-alert"></div>
+
+      <div class="modal-resumen">
+        <div class="modal-resumen-row">
+          <span>Precio del producto</span>
+          <strong id="modal-precio"></strong>
+        </div>
+        <div class="modal-resumen-row senia">
+          <span>Seña a pagar ahora (10%)</span>
+          <strong id="modal-senia"></strong>
+        </div>
+        <div class="modal-resumen-row">
+          <span>Saldo al retirar</span>
+          <strong id="modal-saldo"></strong>
+        </div>
+      </div>
+
+      <p class="modal-nota">
+        Tu pedido queda reservado al pagar la seña. El saldo restante lo abonás cuando lo retirás en el local.
+      </p>
+
+      <button id="modal-btn-pagar" class="btn btn-mp btn-block" onclick="procesarPedido()">
+        Pagar seña con Mercado Pago
+      </button>
+
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/tienda.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Aviso si viene de pago fallido
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'pago_fallido') {
+      showAlert('alert-tienda', 'El pago no fue completado. Podés intentar encargar de nuevo.', 'error');
+    }
+
+    // Cargar productos (público, sin necesidad de login para ver)
+    loadProductos('productos-container');
+
+    // Limpiar pedidos vencidos si está logueado
+    auth.onAuthStateChanged(user => {
+      if (user) cleanupMyExpiredOrders(user.uid);
+    });
+
+    function filtrar(btn, cat) {
+      document.querySelectorAll('.filtro-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      loadProductos('productos-container', cat);
+    }
+
+    // Cerrar modal con ESC
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.getElementById('pedido-modal').classList.contains('active')) {
+        cerrarModal();
+      }
+    });
+  </script>
+</body>
+</html>

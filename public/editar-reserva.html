@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Reserva — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container-sm">
+    <div class="page-header">
+      <h1>Editar Reserva</h1>
+      <p>Modificá la modalidad, fecha u horario — te reasignamos cancha si es necesario</p>
+    </div>
+
+    <div class="card">
+      <div id="reserva-alert"></div>
+
+      <div id="edit-loading" class="loading-overlay">
+        <div class="spinner"></div> Cargando reserva...
+      </div>
+
+      <form id="reserva-form" class="hidden">
+        <!-- Servicio -->
+        <div class="form-group">
+          <label for="reserva-servicio">Servicio</label>
+          <select class="form-control" id="reserva-servicio" required>
+            <option value="">Cargando servicios...</option>
+          </select>
+        </div>
+
+        <!-- Fecha -->
+        <div class="form-group">
+          <label for="reserva-fecha">Fecha</label>
+          <input type="date" class="form-control" id="reserva-fecha" required>
+        </div>
+
+        <!-- Horarios -->
+        <div class="form-group">
+          <label>Horario disponible</label>
+          <div id="time-slots-container">
+            <p class="text-muted">Seleccioná una fecha para ver los horarios disponibles.</p>
+          </div>
+          <input type="hidden" id="selected-time" value="">
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary" style="flex:1;">Guardar cambios</button>
+          <a href="mis-reservas.html" class="btn btn-secondary">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/reservas.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Obtener ID de la reserva desde URL
+    const params = new URLSearchParams(window.location.search);
+    const reservationId = params.get('id');
+
+    if (!reservationId) {
+      window.location.href = 'mis-reservas.html';
+    }
+
+    requireAuth(async (user, userData) => {
+      // Cargar servicios
+      await loadServicesSelect('reserva-servicio');
+
+      // Cargar datos de la reserva
+      const reserva = await loadReservationForEdit(reservationId);
+      if (!reserva) {
+        hide('edit-loading');
+        return;
+      }
+
+      // Llenar formulario
+      const servicioSelect = document.getElementById('reserva-servicio');
+      servicioSelect.value = reserva.servicioId;
+
+      const fechaInput = document.getElementById('reserva-fecha');
+      fechaInput.min = getTodayStr();
+      fechaInput.value = reserva.fecha;
+
+      // Cargar horarios para esa fecha (excluyendo esta reserva)
+      await renderTimeSlots('time-slots-container', reserva.fecha, reservationId);
+
+      // Pre-seleccionar el horario actual
+      document.getElementById('selected-time').value = reserva.hora;
+      const currentSlot = document.querySelector(`.time-slot:not(.occupied)`);
+      document.querySelectorAll('.time-slot').forEach(slot => {
+        if (slot.textContent === reserva.hora && !slot.classList.contains('occupied')) {
+          slot.classList.add('selected');
+        }
+      });
+
+      // Mostrar formulario
+      hide('edit-loading');
+      show(document.getElementById('reserva-form'));
+
+      // Cuando cambia la fecha, recargar horarios
+      fechaInput.addEventListener('change', () => {
+        document.getElementById('selected-time').value = '';
+        renderTimeSlots('time-slots-container', fechaInput.value, reservationId);
+      });
+
+      // Submit
+      document.getElementById('reserva-form').addEventListener('submit', (e) => {
+        handleEditReservation(e, reservationId);
+      });
+    });
+  </script>
+</body>
+</html>

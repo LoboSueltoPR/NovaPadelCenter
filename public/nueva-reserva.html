@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Padel Center — Nueva Reserva</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .precio-resumen {
+      background: var(--color-bg-alt);
+      border-radius: var(--radius-md);
+      padding: 1.2rem 1.5rem;
+      margin: 1rem 0 1.5rem;
+      display: none;
+    }
+    .precio-resumen.visible { display: block; }
+    .precio-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      font-size: 0.9rem;
+      color: var(--color-text-light);
+    }
+    .precio-row.senia {
+      border-top: 1px solid var(--color-border);
+      margin-top: 0.5rem;
+      padding-top: 0.7rem;
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--color-primary-dark);
+    }
+    .precio-row.senia span:last-child {
+      color: var(--color-primary);
+      font-size: 1.15rem;
+    }
+    .mp-note {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      text-align: center;
+      margin-top: 0.8rem;
+    }
+    .btn-mp {
+      background: #009ee3;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .btn-mp:hover { background: #0082bf; color: #fff; }
+    .btn-mp:disabled { opacity: 0.6; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container-sm">
+    <div class="page-header">
+      <h1>Reservar Cancha</h1>
+      <p>Elegí modalidad, fecha y horario — te asignamos una de las 3 canchas</p>
+    </div>
+
+    <div class="card">
+      <div id="reserva-alert"></div>
+
+      <form id="reserva-form">
+        <div class="form-group">
+          <label for="reserva-servicio">Servicio</label>
+          <select class="form-control" id="reserva-servicio" required>
+            <option value="">Cargando servicios...</option>
+          </select>
+        </div>
+
+        <div class="precio-resumen" id="precio-resumen">
+          <div class="precio-row">
+            <span>Precio del servicio</span>
+            <span id="precio-total-display">$0</span>
+          </div>
+          <div class="precio-row senia">
+            <span>Seña a pagar ahora (10%)</span>
+            <span id="senia-display">$0</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reserva-fecha">Fecha</label>
+          <input type="date" class="form-control" id="reserva-fecha" required>
+        </div>
+
+        <div class="form-group">
+          <label>Horario disponible</label>
+          <div id="time-slots-container">
+            <p class="text-muted">Seleccioná una fecha para ver los horarios disponibles.</p>
+          </div>
+          <input type="hidden" id="selected-time" value="">
+        </div>
+
+        <button type="submit" id="btn-pagar" class="btn btn-mp btn-block" disabled>
+          <span id="btn-text">Pagar seña con Mercado Pago</span>
+        </button>
+        <p class="mp-note">
+          Serás redirigido a Mercado Pago para pagar la seña del 10%.<br>
+          El turno se confirma al completar el pago.
+        </p>
+
+      </form>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/reservas.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Mostrar aviso si viene de un pago fallido
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error') === 'pago_fallido') {
+      showAlert('reserva-alert', 'El pago no fue completado. Por favor elegí fecha y horario nuevamente.', 'error');
+    }
+
+    requireAuth(async (user, userData) => {
+      // Limpiar reservas pendiente_pago vencidas de este usuario
+      cleanupMyExpiredReservations(user.uid);
+
+      await loadServicesSelect('reserva-servicio');
+
+      const fechaInput    = document.getElementById('reserva-fecha');
+      const servicioSelect = document.getElementById('reserva-servicio');
+      const precioResumen = document.getElementById('precio-resumen');
+      const precioDisplay = document.getElementById('precio-total-display');
+      const seniaDisplay  = document.getElementById('senia-display');
+      const btnPagar      = document.getElementById('btn-pagar');
+
+      fechaInput.min = getTodayStr();
+
+      function updateBtnState() {
+        const hora   = document.getElementById('selected-time').value;
+        const opt    = servicioSelect.options[servicioSelect.selectedIndex];
+        const precio = parseInt(opt ? opt.dataset.precio || 0 : 0, 10);
+        btnPagar.disabled = !(servicioSelect.value && fechaInput.value && hora && precio > 0);
+      }
+
+      servicioSelect.addEventListener('change', () => {
+        const opt    = servicioSelect.options[servicioSelect.selectedIndex];
+        const precio = parseInt(opt.dataset.precio || 0, 10);
+        if (servicioSelect.value && precio > 0) {
+          const senia = Math.round(precio * 0.10);
+          precioDisplay.textContent = `$${precio.toLocaleString('es-AR')}`;
+          seniaDisplay.textContent  = `$${senia.toLocaleString('es-AR')}`;
+          precioResumen.classList.add('visible');
+        } else {
+          precioResumen.classList.remove('visible');
+        }
+        updateBtnState();
+      });
+
+      fechaInput.addEventListener('change', () => {
+        document.getElementById('selected-time').value = '';
+        renderTimeSlots('time-slots-container', fechaInput.value);
+        updateBtnState();
+      });
+
+      document.getElementById('time-slots-container').addEventListener('click', () => {
+        setTimeout(updateBtnState, 50);
+      });
+
+      document.getElementById('reserva-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const hora = document.getElementById('selected-time').value;
+        const opt  = servicioSelect.options[servicioSelect.selectedIndex];
+
+        if (!servicioSelect.value || !fechaInput.value || !hora) {
+          showAlert('reserva-alert', 'Completá todos los campos y seleccioná un horario.');
+          return;
+        }
+
+        const precio = parseInt(opt.dataset.precio || 0, 10);
+        if (!precio || precio <= 0) {
+          showAlert('reserva-alert', 'Este servicio no tiene precio cargado. Contactá al local.');
+          return;
+        }
+
+        btnPagar.disabled = true;
+        document.getElementById('btn-text').textContent = 'Procesando...';
+
+        try {
+          // 1. Verificar límite de reservas activas (máx. 3 futuras)
+          const today = getTodayStr();
+          const now   = new Date();
+          const activeSnap = await db.collection('reservations')
+            .where('userId', '==', user.uid)
+            .get();
+          let activeCount = 0;
+          activeSnap.forEach(doc => {
+            const r = doc.data();
+            if (r.fecha < today) return; // pasadas no cuentan
+            if (r.estado === 'pendiente_pago') {
+              // solo si no venció aún
+              const exp = r.expiraAt;
+              const expDate = exp ? (exp.toDate ? exp.toDate() : new Date(exp)) : null;
+              if (!expDate || expDate <= now) return;
+            }
+            if (['pendiente_pago', 'pendiente', 'confirmada'].includes(r.estado)) activeCount++;
+          });
+          if (activeCount >= 3) {
+            showAlert('reserva-alert', 'Ya tenés 3 reservas activas. Cancelá una antes de agregar otra.', 'warning');
+            btnPagar.disabled = false;
+            document.getElementById('btn-text').textContent = 'Pagar seña con Mercado Pago';
+            return;
+          }
+
+          // 2. Verificar disponibilidad de cancha
+          const slotInfo = await getSlotInfo(fechaInput.value);
+          if (slotInfo.occupied.has(hora)) {
+            showAlert('reserva-alert', 'Horario completo (3 canchas ocupadas). Elegí otro.');
+            renderTimeSlots('time-slots-container', fechaInput.value);
+            document.getElementById('selected-time').value = '';
+            btnPagar.disabled = false;
+            document.getElementById('btn-text').textContent = 'Pagar seña con Mercado Pago';
+            return;
+          }
+          const canchaAsignada = pickCanchaLibre(slotInfo.canchasUsadas, hora);
+          if (!canchaAsignada) {
+            showAlert('reserva-alert', 'Horario completo (3 canchas ocupadas). Elegí otro.');
+            renderTimeSlots('time-slots-container', fechaInput.value);
+            btnPagar.disabled = false;
+            document.getElementById('btn-text').textContent = 'Pagar seña con Mercado Pago';
+            return;
+          }
+
+          // 4. Leer config de Mercado Pago desde Firestore
+          const mpDoc = await db.collection('config').doc('mp').get();
+          if (!mpDoc.exists || !mpDoc.data().access_token) {
+            showAlert('reserva-alert', 'Los pagos aún no están configurados. Contactá al local.');
+            btnPagar.disabled = false;
+            document.getElementById('btn-text').textContent = 'Pagar seña con Mercado Pago';
+            return;
+          }
+          const { access_token, sandbox } = mpDoc.data();
+
+          // 5. Crear reserva en Firestore con estado pendiente_pago
+          const senia     = Math.round(precio * 0.10);
+          const expiraAt  = new Date(Date.now() + 10 * 60 * 1000);
+
+          const reservaRef = await db.collection('reservations').add({
+            userId:          user.uid,
+            nombreUsuario:   user.displayName || '',
+            emailUsuario:    user.email,
+            telefonoUsuario: userData?.telefono || '',
+            servicioId:      servicioSelect.value,
+            servicioNombre:  opt.dataset.nombre,
+            fecha:           fechaInput.value,
+            hora:            hora,
+            cancha:          canchaAsignada,
+            estado:          'pendiente_pago',
+            precioTotal:     precio,
+            senia:           senia,
+            expiraAt:        expiraAt,
+            paymentId:       null,
+            createdAt:       firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt:       firebase.firestore.FieldValue.serverTimestamp()
+          });
+
+          // 6. Crear preferencia en Mercado Pago
+          const base = window.location.href.replace('nueva-reserva.html', '').replace(/\?.*$/, '');
+
+          const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+            method: 'POST',
+            headers: {
+              'Content-Type':  'application/json',
+              'Authorization': `Bearer ${access_token}`
+            },
+            body: JSON.stringify({
+              items: [{
+                title:      `Seña — ${opt.dataset.nombre}`,
+                quantity:   1,
+                unit_price: senia,
+                currency_id: 'ARS'
+              }],
+              payer:              { email: user.email },
+              external_reference: reservaRef.id,
+              back_urls: {
+                success: `${base}pago-exitoso.html`,
+                failure: `${base}nueva-reserva.html?error=pago_fallido`,
+                pending: `${base}pago-exitoso.html?pending=1`
+              },
+              auto_return:          'approved',
+              statement_descriptor: 'NOVA PADEL CENTER'
+            })
+          });
+
+          if (!mpResponse.ok) {
+            const errData = await mpResponse.json().catch(() => ({}));
+            console.error('Error MP:', errData);
+            await reservaRef.delete(); // liberar slot
+            throw new Error('No se pudo conectar con Mercado Pago.');
+          }
+
+          const preference = await mpResponse.json();
+          const initPoint  = sandbox ? preference.sandbox_init_point : preference.init_point;
+
+          // 7. Guardar initPoint para poder reanudar si se cierra la ventana
+          await reservaRef.update({ initPoint });
+
+          // 6. Redirigir al checkout de MP
+          window.location.href = initPoint;
+
+        } catch (err) {
+          console.error('Error al iniciar pago:', err);
+          showAlert('reserva-alert', err.message || 'Error al iniciar el pago. Intentá de nuevo.');
+          btnPagar.disabled = false;
+          document.getElementById('btn-text').textContent = 'Pagar seña con Mercado Pago';
+        }
+      });
+    });
+  </script>
+</body>
+</html>

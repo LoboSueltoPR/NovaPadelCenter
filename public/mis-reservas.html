@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mis Reservas — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+
+    <!-- Perfil del usuario -->
+    <div class="user-profile-bar card mb-3">
+      <div class="user-profile-info">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div>
+          <h2 id="user-nombre">Cargando...</h2>
+          <p class="text-muted" id="user-email"></p>
+          <p class="text-muted" id="user-telefono"></p>
+        </div>
+      </div>
+      <a href="nueva-reserva.html" class="btn btn-primary">+ Nueva reserva</a>
+    </div>
+
+    <!-- Próximo turno destacado -->
+    <div id="proximo-turno-container" class="hidden mb-3">
+      <div class="card proximo-turno-card">
+        <div>
+          <p style="font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; color:var(--color-primary); font-weight:600">Próxima reserva</p>
+          <h3 id="proximo-servicio"></h3>
+          <p class="text-muted" id="proximo-fecha-hora"></p>
+        </div>
+        <span class="badge badge-confirmada" id="proximo-estado"></span>
+      </div>
+    </div>
+
+    <!-- Turnos próximos / activos -->
+    <div class="page-header" style="text-align:left; margin-bottom:1rem;">
+      <h2>Mis reservas de cancha</h2>
+      <p class="text-muted" style="font-size:.9rem">El historial completo está en <a href="mi-perfil.html">Mi Perfil</a>.</p>
+    </div>
+
+    <div id="reserva-alert"></div>
+    <div id="reservations-list">
+      <div class="loading-overlay"><div class="spinner"></div> Cargando reservas...</div>
+    </div>
+
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/reservas.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    requireAuth(async (user, userData) => {
+      // ── Perfil ──
+      const nombre = userData ? userData.nombre : user.displayName || user.email;
+      document.getElementById('user-nombre').textContent = nombre;
+      document.getElementById('user-email').textContent = user.email;
+      document.getElementById('user-avatar').textContent = nombre.charAt(0).toUpperCase();
+
+      if (userData && userData.telefono) {
+        document.getElementById('user-telefono').textContent = userData.telefono;
+      } else {
+        document.getElementById('user-telefono').remove();
+      }
+
+      // ── Próximo turno ──
+      try {
+        const today = getTodayStr();
+        const proxSnap = await db.collection('reservations')
+          .where('userId', '==', user.uid)
+          .where('fecha', '>=', today)
+          .where('estado', 'in', ['pendiente', 'confirmada'])
+          .orderBy('fecha')
+          .orderBy('hora')
+          .limit(1)
+          .get();
+
+        if (!proxSnap.empty) {
+          const r = proxSnap.docs[0].data();
+          document.getElementById('proximo-servicio').textContent = r.servicioNombre;
+          document.getElementById('proximo-fecha-hora').textContent =
+            `${formatDate(r.fecha)} a las ${r.hora} hs`;
+          const estadoEl = document.getElementById('proximo-estado');
+          estadoEl.textContent = r.estado;
+          estadoEl.className = `badge badge-${r.estado}`;
+          show('proximo-turno-container');
+        }
+      } catch (err) {
+        console.warn('No se pudo cargar próximo turno:', err.message);
+      }
+
+      // ── Turnos activos ──
+      await loadMyReservations('reservations-list');
+    });
+  </script>
+</body>
+</html>

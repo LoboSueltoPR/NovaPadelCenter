@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Padel Center — Nuestras canchas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .canchas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.2rem;
+      margin-bottom: 2.5rem;
+    }
+    .cancha-card {
+      background: var(--color-card);
+      border: 1px solid var(--color-border);
+      border-top: 4px solid var(--color-primary);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      transition: var(--transition);
+    }
+    .cancha-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+    .cancha-icon { font-size: 2rem; margin-bottom: .5rem; }
+    .cancha-card h3 { color: var(--color-primary-dark); margin-bottom: .3rem; }
+    .cancha-card ul { list-style: none; padding: 0; margin: .8rem 0 0; font-size: .88rem; }
+    .cancha-card ul li { padding: .3rem 0; color: var(--color-text-light); border-bottom: 1px dashed var(--color-border); }
+    .cancha-card ul li:last-child { border: none; }
+  </style>
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="container">
+    <div class="page-header">
+      <h1>Nuestras canchas</h1>
+      <p>Tres canchas de pádel listas para vos — reservá la que prefieras</p>
+    </div>
+
+    <div class="canchas-grid">
+      <div class="cancha-card">
+        <div class="cancha-icon">🎾</div>
+        <h3>Cancha 1</h3>
+        <p class="text-muted">Cancha techada con césped sintético de última generación.</p>
+        <ul>
+          <li>Superficie: césped sintético</li>
+          <li>Iluminación LED</li>
+          <li>Techada</li>
+        </ul>
+      </div>
+      <div class="cancha-card">
+        <div class="cancha-icon">🎾</div>
+        <h3>Cancha 2</h3>
+        <p class="text-muted">Cancha techada ideal para jugar todo el año sin importar el clima.</p>
+        <ul>
+          <li>Superficie: césped sintético</li>
+          <li>Iluminación LED</li>
+          <li>Techada</li>
+        </ul>
+      </div>
+      <div class="cancha-card">
+        <div class="cancha-icon">🎾</div>
+        <h3>Cancha 3</h3>
+        <p class="text-muted">Cancha descubierta para disfrutar al aire libre en días de buen clima.</p>
+        <ul>
+          <li>Superficie: césped sintético</li>
+          <li>Iluminación LED</li>
+          <li>Descubierta</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="page-header" style="text-align:left">
+      <h2>Tipos de reserva</h2>
+      <p>Elegí la modalidad que más te convenga</p>
+    </div>
+
+    <!-- Listado de servicios (desde Firestore) -->
+    <div id="tratamientos-list">
+      <div class="loading-overlay"><div class="spinner"></div> Cargando opciones...</div>
+    </div>
+
+    <div class="text-center mt-3">
+      <a href="nueva-reserva.html" class="btn btn-primary">Reservar cancha</a>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Cargar servicios activos desde Firestore (alquiler 60min, 90min, etc.)
+    async function loadTratamientos() {
+      const container = document.getElementById('tratamientos-list');
+      try {
+        const servicios = await cachedFetch('services:activos', CACHE_TTL.SERVICES, async () => {
+          const snap = await db.collection('services').where('activo', '==', true).get();
+          const arr = [];
+          snap.forEach(doc => arr.push({ id: doc.id, ...doc.data() }));
+          arr.sort((a, b) =>
+            (a.categoria || '').localeCompare(b.categoria || '') ||
+            (a.nombre || '').localeCompare(b.nombre || '')
+          );
+          return arr;
+        });
+
+        if (!servicios || servicios.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <span class="empty-state-icon" aria-hidden="true">🎾</span>
+              <p>Todavía no hay modalidades cargadas.<br>Volvé en unos minutos.</p>
+            </div>`;
+          return;
+        }
+
+        let html = '';
+        servicios.forEach(s => {
+          html += `
+            <div class="tratamiento-card">
+              <div class="tratamiento-info">
+                <h3>${escapeHtml(s.nombre)}</h3>
+                <span class="categoria">${escapeHtml(s.categoria || 'reserva')}</span>
+              </div>
+              <span class="tratamiento-duracion">${s.duracionMin} min${s.precio ? ' · $' + s.precio.toLocaleString('es-AR') : ''}</span>
+            </div>`;
+        });
+        container.innerHTML = html;
+      } catch (err) {
+        console.error('Error al cargar opciones:', err);
+        container.innerHTML = '<div class="alert alert-error">Error al cargar las opciones.</div>';
+      }
+    }
+
+    loadTratamientos();
+  </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registro — Nova Padel Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>Crear Cuenta</h1>
+      <div id="auth-alert"></div>
+
+      <form id="register-form" onsubmit="handleRegister(event)">
+        <div class="form-group">
+          <label for="reg-nombre">Nombre completo *</label>
+          <input type="text" class="form-control" id="reg-nombre" placeholder="Tu nombre" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-email">Email *</label>
+          <input type="email" class="form-control" id="reg-email" placeholder="tu@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-telefono">Teléfono / WhatsApp *</label>
+          <input type="tel" class="form-control" id="reg-telefono" placeholder="Ej: 11 1234-5678" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Contraseña *</label>
+          <input type="password" class="form-control" id="reg-password" placeholder="Creá una contraseña" required minlength="8" aria-describedby="password-hints">
+          <ul id="password-hints" class="password-hints">
+            <li id="hint-length">Al menos 8 caracteres</li>
+            <li id="hint-letter">Al menos una letra</li>
+            <li id="hint-number">Al menos un número</li>
+          </ul>
+        </div>
+        <div class="form-group">
+          <label for="reg-password2">Repetir contraseña *</label>
+          <input type="password" class="form-control" id="reg-password2" placeholder="Repetí tu contraseña" required>
+          <small id="match-hint" class="password-hint-match"></small>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Registrarme</button>
+      </form>
+
+      <div class="auth-footer">
+        <p>¿Ya tenés cuenta? <a href="login.html">Iniciar sesión</a></p>
+      </div>
+    </div>
+  </div>
+
+  <div id="footer"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('navbar').innerHTML = getNavbarHTML();
+    document.getElementById('footer').innerHTML = getFooterHTML();
+    initNavbar();
+
+    // Si ya está logueado, redirigir
+    auth.onAuthStateChanged(user => {
+      if (user) window.location.href = 'dashboard.html';
+    });
+
+    // Validación de contraseña en vivo
+    const pwd  = document.getElementById('reg-password');
+    const pwd2 = document.getElementById('reg-password2');
+    const hintLength = document.getElementById('hint-length');
+    const hintLetter = document.getElementById('hint-letter');
+    const hintNumber = document.getElementById('hint-number');
+    const matchHint  = document.getElementById('match-hint');
+
+    function checkPassword() {
+      const v = pwd.value;
+      hintLength.classList.toggle('ok', v.length >= 8);
+      hintLetter.classList.toggle('ok', /[a-zA-Z]/.test(v));
+      hintNumber.classList.toggle('ok', /\d/.test(v));
+    }
+    function checkMatch() {
+      if (!pwd2.value) { matchHint.textContent = ''; matchHint.className = 'password-hint-match'; return; }
+      if (pwd.value === pwd2.value) {
+        matchHint.textContent = '✓ Las contraseñas coinciden';
+        matchHint.className = 'password-hint-match ok';
+      } else {
+        matchHint.textContent = '✕ Las contraseñas no coinciden';
+        matchHint.className = 'password-hint-match err';
+      }
+    }
+    pwd.addEventListener('input', () => { checkPassword(); checkMatch(); });
+    pwd2.addEventListener('input', checkMatch);
+  </script>
+</body>
+</html>
